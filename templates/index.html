@@ -5,19 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="css/bootstrap.min.css" rel="stylesheet">
   <link href="css/style.css" rel="stylesheet">
+  <meta http-equiv="refresh" content="{{interval}}">
 </head>
 <body>
 
   <div class="container">
 
-    <h1>Latest Image ({{modified}})</h1>
+    <h1>Camera ({{modified}})</h1>
 
     <hr>
-
     <div class="row">
       <div>
         <span class="thumbnail">
-          <img src="{{image}}">
+          <img id="latest-image" src="{{image}}"">
         </span>
       </div>
     </div>

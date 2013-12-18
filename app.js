@@ -7,8 +7,10 @@ var fs = require('fs'),
 var configPath = 'toka.pfs',
   dbPath = 'ConfigDB',
   backupPath = 'backup',
-  latestImagePath = 'public/latest/image.jpg',
-  publicImagePath = 'latest/image.jpg';
+  latestImageFolder = 'latest',
+  imagesFolder = 'camera_pictures';
+
+var photoInterval = 60; // seconds
 
 fs.exists(configPath, function(exists) {
   if (!exists) return console.log('ERROR! Config file not found.');
@@ -20,6 +22,23 @@ fs.exists(dbPath, function(exists) {
 
 fs.exists(backupPath, function(exists) {
   if (!exists) fs.mkdirSync(backupPath);
+});
+
+fs.watch(imagesFolder, function(event, filename) {
+  var imagePath = imagesFolder + '/' + filename;
+
+  if (filename.match(/\.DS_Store/)) return false;
+
+  fs.exists(imagePath, function(exists) {
+    if (exists) {
+      fs.readFile(imagePath, function(err, data) {
+        if (!err) {
+          fs.createReadStream(imagesFolder + '/' + filename)
+            .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
+        } else console.log(err);
+      });
+    }
+  });
 });
 
 var options = {
@@ -70,13 +89,14 @@ server.start(function() {
 });
 
 function imageIndex(request) {
-  fs.stat(latestImagePath, function(err, stats) {
+  fs.stat('public/' + latestImageFolder + '/image.jpg', function(err, stats) {
     var modified = moment(stats.mtime).fromNow();
 
     // Render the view
     request.reply.view('index.html', {
-      image: publicImagePath,
-      modified: modified
+      image: latestImageFolder + '/image.jpg',
+      modified: modified,
+      interval: photoInterval
     });
 
   });
@@ -104,8 +124,6 @@ function adminIndex(request) {
 
 function formHandler(request) {
   var payload = request.payload;
-
-  // DbData
   var db = new sqlite3.Database(dbPath);
 
   db.parallelize(function() {

@@ -26,3 +26,11 @@ $('#form').on('submit', function(event) {
   });
 
 });
+
+// var interval = $('#latest-image').data('interval');
+// window.setInterval(function() {
+//   var latestImage = 'latest/image.jpg';
+//   var jqxhr = $.get(latestImage).done(function() {
+//     $('#latest-image').attr('src', latestImage);
+//   });
+// }, interval);
