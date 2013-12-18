@@ -1,7 +1,7 @@
 {
-  "name": "node-camera-config",
+  "name": "node-camera-admin",
   "version": "0.0.1",
-  "description": "Camera Config GUI",
+  "description": "Vogon-IT Camera Admin Panel",
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -16,10 +16,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vogon-IT/node-camera-config"
+    "url": "https://github.com/Vogon-IT/node-camera-admin"
   },
   "bugs": {
-    "url": "https://github.com/Vogon-IT/node-camera-config/issues"
+    "url": "https://github.com/Vogon-IT/node-camera-admin/issues"
   },
-  "homepage": "https://github.com/Vogon-IT/node-camera-config"
+  "homepage": "https://github.com/Vogon-IT/node-camera-admin",
+  "devDependencies": {}
 }
