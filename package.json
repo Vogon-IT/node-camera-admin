@@ -1,0 +1,25 @@
+{
+  "name": "node-camera-config",
+  "version": "0.0.1",
+  "description": "Camera Config GUI",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Teemu Jönkkäri",
+  "license": "MIT",
+  "dependencies": {
+    "hapi": "~1.20.0",
+    "sqlite3": "~2.1.19",
+    "handlebars": "~1.1.2",
+    "moment": "~2.4.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Vogon-IT/node-camera-config"
+  },
+  "bugs": {
+    "url": "https://github.com/Vogon-IT/node-camera-config/issues"
+  },
+  "homepage": "https://github.com/Vogon-IT/node-camera-config"
+}
