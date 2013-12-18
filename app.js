@@ -10,7 +10,15 @@ var configPath = 'toka.pfs',
   latestImageFolder = 'latest',
   imagesFolder = 'camera_pictures';
 
-var photoInterval = 60; // seconds
+// photo interval
+var photoInterval = 60; // seconds (default)
+var db = new sqlite3.Database(dbPath);
+db.serialize(function() {
+  db.each("SELECT * FROM CONFIG", function(err, row) {
+    if (row.property.match(/interval/)) photoInterval = parseInt(row.value, 10);
+  });
+});
+db.close();
 
 fs.exists(configPath, function(exists) {
   if (!exists) return console.log('ERROR! Config file not found.');
