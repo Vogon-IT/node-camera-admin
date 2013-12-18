@@ -134,6 +134,8 @@ function formHandler(request) {
   var payload = request.payload;
   var db = new sqlite3.Database(dbPath);
 
+  if(parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
+
   db.parallelize(function() {
     var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
 
