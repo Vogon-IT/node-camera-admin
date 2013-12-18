@@ -7,9 +7,7 @@
   <link href="css/style.css" rel="stylesheet">
 </head>
 <body>
-
   <div class="container">
-
     <h1>Camera Configuration</h1>
 
     <hr>
@@ -20,10 +18,10 @@
       <legend>Database Configuration</legend>
 
       {{#each dbData}}
-        <div class="form-group">
-          <label for="">{{property}}</label>
-          <input type="text" class="form-control" id="{{property}}" name="{{property}}" value="{{value}}">
-        </div>
+      <div class="form-group">
+        <label for="">{{property}}</label>
+        <input type="text" class="form-control" id="{{property}}" name="{{property}}" value="{{value}}">
+      </div>
       {{/each}}
 
       <hr>
@@ -47,9 +45,7 @@
     <footer>
       <p>&copy; Vogon-IT 2013</p>
     </footer>
-
   </div>
-
   <script src="js/jquery.min.js"></script>
   <script src="js/script.js"></script>
 </body>
