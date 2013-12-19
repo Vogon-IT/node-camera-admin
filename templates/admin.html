@@ -9,38 +9,30 @@
 <body>
   <div class="container">
     <h1>Camera Configuration</h1>
-
     <hr>
     <div class="alert alert-success">Configuration saved successfully.</div>
     <div class="alert alert-danger">...</div>
-
     <form role="form" id="form">
       <legend>Database Configuration</legend>
-
       {{#each dbData}}
       <div class="form-group">
         <label for="">{{property}}</label>
         <input type="text" class="form-control" id="{{property}}" name="{{property}}" value="{{value}}">
       </div>
       {{/each}}
-
       <hr>
       <legend>File Configuration</legend>
-
       <div class="bs-callout bs-callout-danger">
         <h4>Warning!</h4>
         <p>Please don't change the configuration file unless you really know what you are doing.</p>
       </div>
-
       <div class="form-group">
         <label for="exampleInputFile">configuration file</label>
         <textarea class="form-control" rows="13" name="configData">{{configData}}</textarea>
       </div>
-
       <hr>
       <button type="submit" class="btn btn-default">Save changes</button>
     </form>
-
     <hr>
     <footer>
       <p>&copy; Vogon-IT 2013</p>
