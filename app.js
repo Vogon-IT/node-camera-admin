@@ -35,18 +35,18 @@ fs.exists(backupPath, function(exists) {
 fs.watch(imagesFolder, function(event, filename) {
   var imagePath = imagesFolder + '/' + filename;
 
-  if (filename.match(/\.DS_Store/)) return false;
-
-  fs.exists(imagePath, function(exists) {
-    if (exists) {
-      fs.readFile(imagePath, function(err, data) {
-        if (!err) {
-          fs.createReadStream(imagesFolder + '/' + filename)
-            .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
-        } else console.log(err);
-      });
-    }
-  });
+  if (filename.match(/(jpg|jpeg)$/)) {
+    fs.exists(imagePath, function(exists) {
+      if (exists) {
+        fs.readFile(imagePath, function(err, data) {
+          if (!err) {
+            fs.createReadStream(imagesFolder + '/' + filename)
+              .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
+          } else console.log(err);
+        });
+      }
+    });
+  }
 });
 
 var options = {
@@ -134,7 +134,7 @@ function formHandler(request) {
   var payload = request.payload;
   var db = new sqlite3.Database(dbPath);
 
-  if(parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
+  if (parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
 
   db.parallelize(function() {
     var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
