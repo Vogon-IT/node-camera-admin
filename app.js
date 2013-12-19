@@ -1,4 +1,5 @@
 var fs = require('fs'),
+  util = require('util'),
   Hapi = require('hapi'),
   moment = require('moment'),
   sqlite3 = require('sqlite3').verbose();
@@ -93,7 +94,7 @@ server.route({
 
 // Start the server
 server.start(function() {
-  console.log('\n >> Server started at ' + server.info.uri + '\n');
+  util.puts('> Server started at ' + server.info.uri);
 });
 
 function imageIndex(request) {
