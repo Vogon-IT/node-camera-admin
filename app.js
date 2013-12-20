@@ -43,7 +43,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
 
   fs.watch(imageFolder, function(event, filename) {
     var imagePath = imageFolder + filename;
-    console.log(imagePath);
+
     if (filename.match(/(jpg|jpeg)$/)) {
       fs.exists(imagePath, function(exists) {
         if (exists) {
