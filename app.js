@@ -10,6 +10,11 @@ var dbPath = 'ConfigDB',
   backupPath = 'backup',
   latestImageFolder = 'latest';
 
+// local overwrites
+var configPath = 'NodeMap.pfs',
+  imageFolder = 'camera_pictures/',
+  photoInterval = 20;
+
 // Config values from database
 var db = new sqlite3.Database(dbPath);
 db.serialize(function() {
@@ -20,9 +25,6 @@ db.serialize(function() {
   });
 });
 db.close();
-
-// local overwrites
-// var configPath = 'NodeMap.pfs', imageFolder = 'camera_pictures/', photoInterval = 20;
 
 fs.exists(configPath, function(exists) {
   if (!exists) return console.log('ERROR! Config file not found.');
