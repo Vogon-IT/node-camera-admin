@@ -60,7 +60,7 @@ var options = {
 };
 
 // Create a server with a host, port, and options
-var server = Hapi.createServer('localhost', 8000, options);
+var server = Hapi.createServer('87.94.74.47', 8080, options);
 
 server.route({
   method: 'GET',
