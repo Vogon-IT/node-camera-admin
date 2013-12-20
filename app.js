@@ -2,21 +2,24 @@ var fs = require('fs'),
   util = require('util'),
   Hapi = require('hapi'),
   moment = require('moment'),
+  im = require('imagemagick'),
   sqlite3 = require('sqlite3').verbose();
 
 // File paths
 var configPath = 'toka.pfs',
   dbPath = 'ConfigDB',
   backupPath = 'backup',
-  latestImageFolder = 'latest',
-  imagesFolder = 'camera_pictures';
+  latestImageFolder = 'latest';
 
-// photo interval
-var photoInterval = 60; // seconds (default)
+var imageFolder = 'camera_pictures/',
+  photoInterval = 60; // seconds (default)
+
+// Config values from database
 var db = new sqlite3.Database(dbPath);
 db.serialize(function() {
   db.each("SELECT * FROM CONFIG", function(err, row) {
-    if (row.property.match(/interval/)) photoInterval = parseInt(row.value, 10);
+    if (row.property.match(/Interval/)) photoInterval = parseInt(row.value, 10);
+    if (row.property.match(/ImageFolder/)) imageFolder = row.value;
   });
 });
 db.close();
@@ -33,17 +36,28 @@ fs.exists(backupPath, function(exists) {
   if (!exists) fs.mkdirSync(backupPath);
 });
 
-fs.watch(imagesFolder, function(event, filename) {
-  var imagePath = imagesFolder + '/' + filename;
+fs.watch(imageFolder, function(event, filename) {
+  var imagePath = imageFolder + filename;
 
   if (filename.match(/(jpg|jpeg)$/)) {
     fs.exists(imagePath, function(exists) {
       if (exists) {
         fs.readFile(imagePath, function(err, data) {
           if (!err) {
-            fs.createReadStream(imagesFolder + '/' + filename)
-              .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
-          } else console.log(err);
+
+            // https://github.com/rsms/node-imagemagick
+            im.resize({
+              srcPath: imageFolder + filename,
+              dstPath: 'public/' + latestImageFolder + '/image.jpg',
+              width: 860
+            }, function(err, stdout, stderr) {
+              if (err) util.puts(err);
+            });
+
+            //  fs.createReadStream(imageFolder + filename)
+            //    .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
+
+          } else util.puts(err);
         });
       }
     });

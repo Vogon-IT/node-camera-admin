@@ -1,7 +1,12 @@
 
-
 label {
   text-transform: capitalize;
+}
+.thumbnail-row > div {
+  text-align: center;
+}
+.thumbnail {
+  display: inline-block;
 }
 
 /*
