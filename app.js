@@ -6,13 +6,9 @@ var fs = require('fs'),
   sqlite3 = require('sqlite3').verbose();
 
 // File paths
-var configPath = 'toka.pfs',
-  dbPath = 'ConfigDB',
+var dbPath = 'ConfigDB',
   backupPath = 'backup',
   latestImageFolder = 'latest';
-
-var imageFolder = 'camera_pictures/',
-  photoInterval = 60; // seconds (default)
 
 // Config values from database
 var db = new sqlite3.Database(dbPath);
@@ -20,9 +16,13 @@ db.serialize(function() {
   db.each("SELECT * FROM CONFIG", function(err, row) {
     if (row.property.match(/Interval/)) photoInterval = parseInt(row.value, 10);
     if (row.property.match(/ImageFolder/)) imageFolder = row.value;
+    if (row.property.match(/CameraNodeMap/)) configPath = row.value;
   });
 });
 db.close();
+
+// local overwrites
+// var configPath = 'NodeMap.pfs', imageFolder = 'camera_pictures/', photoInterval = 20;
 
 fs.exists(configPath, function(exists) {
   if (!exists) return console.log('ERROR! Config file not found.');
