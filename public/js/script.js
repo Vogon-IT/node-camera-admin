@@ -1,6 +1,24 @@
 $('.alert-success').hide();
 $('.alert-danger').hide();
 
+// Switch Btn
+var value = $('#Active').val(),
+  $switch = $('#switch');
+
+$switch.prop('checked', value == 1 ? true : false);
+$switch.bootstrapSwitch();
+
+$switch.on('switch-change', function(e, data) {
+  var value = data.value; // console.log(e, $element, value);
+
+  $('#Active').val(value ? 1 : 0);
+
+  setTimeout(function() {
+    $('#form').trigger('submit');
+  }, 1000);
+
+});
+
 $('#form').on('submit', function(event) {
   event.preventDefault();
 

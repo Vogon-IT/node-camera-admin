@@ -13,21 +13,24 @@ var dbPath = 'ConfigDB',
 // local overwrites
 var configPath = 'NodeMap.pfs',
   imageFolder = 'camera_pictures/',
-  photoInterval = 20;
+  photoInterval = 60;
 
 // Config values from database
 var db = new sqlite3.Database(dbPath);
 
 db.serialize(function() {
   db.each("SELECT * FROM CONFIG", function(err, row) {
-    if (row.property.match(/Interval/)) photoInterval = parseInt(row.value, 10);
-    if (row.property.match(/ImageFolder/)) imageFolder = row.value;
-    if (row.property.match(/CameraNodeMap/)) configPath = row.value;
+    if (row.property.match(/^Interval$/)) photoInterval = parseInt(row.value, 10);
+    if (row.property.match(/^ImageFolder$/)) imageFolder = row.value;
+    if (row.property.match(/^CameraNodeMap$/)) configPath = row.value;
   });
 });
 db.close();
 
 setTimeout(function() { // wait until db values are loaded. refactor with promises
+
+  // configPath = 'NodeMap.pfs';
+  // imageFolder = 'camera_pictures/';
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
@@ -58,9 +61,6 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
               }, function(err, stdout, stderr) {
                 if (err) util.puts(err);
               });
-
-              //  fs.createReadStream(imageFolder + filename)
-              //    .pipe(fs.createWriteStream('public/' + latestImageFolder + '/image.jpg'));
 
             } else util.puts(err);
           });
@@ -139,6 +139,15 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
 
     db.serialize(function() {
       db.all("SELECT * FROM CONFIG", function(err, rows) {
+
+        rows.forEach(function(row) {
+          if (row['property'].match(/^ConfigVersion$/)) row['hidden'] = 'hidden';
+          if (row['property'].match(/^Active$/)) {
+            row['switch'] = 'switch';
+            row['hidden'] = 'hidden';
+          }
+        });
+
         // Render the view
         request.reply.view('admin.html', {
           configData: configData,
@@ -147,7 +156,6 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
       });
     });
     db.close();
-
   }
 
   function formHandler(request) {
@@ -155,6 +163,8 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     var db = new sqlite3.Database(dbPath);
 
     if (parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
+
+    payload['ConfigVersion'] = new Date().toString();
 
     db.parallelize(function() {
       var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
@@ -174,15 +184,18 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     var configData = payload.configData;
     // Make backup file from old config file
     fs.readFile(configPath, function(err, data) {
-      fs.writeFile(backupPath + '/Backup ' + new Date(), data, function(err) {
-        // Save new configuration after backup is done
-        fs.writeFile(configPath, configData, function(err) {
-          if (err) return request.reply({
-            status: 0,
-            message: err.message
+      // Check if any changes
+      if (configData !== data.toString()) {
+        fs.writeFile(backupPath + '/Backup ' + new Date(), data, function(err) {
+          // Save new configuration after backup is done
+          fs.writeFile(configPath, configData, function(err) {
+            if (err) return request.reply({
+              status: 0,
+              message: err.message
+            });
           });
         });
-      });
+      }
     });
 
     request.reply({
