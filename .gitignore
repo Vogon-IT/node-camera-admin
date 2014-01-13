@@ -1,4 +1,5 @@
 .DS_Store
+ConfigDB
 node_modules
 backup
 camera_pictures

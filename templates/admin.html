@@ -19,15 +19,22 @@
     <form role="form" id="form">
       <legend>Camera State</legend>
       <div class="form-group">
-        <input id="switch" class="pull-right" type="checkbox" data-on="success" data-off="danger">
+        <input id="switch" type="checkbox" data-on="success" data-off="danger">
       </div>
 
       <legend>Database Configuration</legend>
       {{#each dbData}}
-        <div class="form-group {{hidden}} {{switch}}">
-          <label for="">{{property}}</label>
-          <input type="text" class="form-control" id="{{property}}" name="{{property}}" value="{{value}}">
-        </div>
+        {{#if checkbox}}
+          <div class="form-group">
+            <label for="{{property}}" style="display: block;">{{property}}</label>
+            <input id="{{property}}" name="{{property}}" type="checkbox" data-on="success" data-off="danger" class="checkbox form-control" {{checked}}>
+          </div>
+        {{else}}
+          <div class="form-group {{hidden}} {{switch}}">
+            <label for="">{{property}}</label>
+            <input type="text" class="form-control" id="{{property}}" name="{{property}}" value="{{value}}">
+          </div>
+        {{/if}}
       {{/each}}
       <hr>
       <legend>File Configuration</legend>
@@ -49,6 +56,7 @@
   </div>
   <script src="js/jquery.min.js"></script>
   <script src="js/bootstrap-switch.min.js"></script>
+  <script src="js/lo-dash.min.js"></script>
   <script src="js/script.js"></script>
 </body>
 </html>

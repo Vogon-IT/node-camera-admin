@@ -142,6 +142,10 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
 
         rows.forEach(function(row) {
           if (row['property'].match(/^ConfigVersion$/)) row['hidden'] = 'hidden';
+          if (row['property'].match(/^KeepRAW$/)) {
+            row['checkbox'] = 'checkbox';
+            row['checked'] = row.value === '1' ? 'checked' : '';
+          }
           if (row['property'].match(/^Active$/)) {
             row['switch'] = 'switch';
             row['hidden'] = 'hidden';
@@ -170,9 +174,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
       var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
 
       for (var property in payload) {
-        if (property !== 'configData') {
-          stmt.run(payload[property], property);
-        }
+        if (property !== 'configData') stmt.run(payload[property], property);
       }
 
       stmt.finalize();

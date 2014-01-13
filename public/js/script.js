@@ -19,15 +19,35 @@ $switch.on('switch-change', function(e, data) {
 
 });
 
+$('.checkbox').bootstrapSwitch();
+
 $('#form').on('submit', function(event) {
   event.preventDefault();
 
   $('.alert-success').hide();
   $('.alert-danger').hide();
 
-  var form = $(this).serialize();
+  var form = $(this).serializeArray();
 
-  var jqxhr = $.post('/admin', form, function(data) {
+  var checkboxes = $('input:checkbox').map(function() {
+    if (this.name === 'KeepRAW') {
+      var exists = _.findKey(form, {
+        'name': 'KeepRAW'
+      });
+      if (_.isUndefined(exists)) {
+        form.push({
+          name: this.name,
+          value: this.checked ? '1' : '0'
+        });
+      } else {
+        form[exists].value = this.checked ? '1' : '0';
+      }
+    }
+  });
+
+  var data = $.param(form);
+
+  var jqxhr = $.post('/admin', data, function(data) {
     if (data.status === 1) {
       $('.alert-success').show();
     } else {
