@@ -3,41 +3,83 @@ var fs = require('fs'),
   Hapi = require('hapi'),
   moment = require('moment'),
   im = require('imagemagick'),
+  mongoose = require('mongoose'),
   sqlite3 = require('sqlite3').verbose();
 
-// File paths
-var dbPath = 'ConfigDB',
-  backupPath = 'backup',
+// mongodb
+var Schema = mongoose.Schema;
+
+var configSchema = new Schema({
+  Config: String,
+  ConfigVersion: {
+    type: Date,
+    default: Date.now
+  },
+  KeepRAW: Number,
+  FilenameConvention: String,
+  ImageFolder: String,
+  ImageFolderRAW: String,
+  Active: Number,
+  Interval: Number,
+  ImgFocalLength: Number,
+  ImgApertureValue: Number,
+  ImgCopyright: String,
+  CameraNodeMap: String
+});
+
+var Config = mongoose.model('Config', configSchema);
+mongoose.connect('mongodb://localhost/vogon');
+
+var db = mongoose.connection;
+db.on('error', console.error.bind(console, 'mongodb connection error:'));
+db.once('open', function callback() {});
+
+// default config
+var config = new Config({
+  Config: "default",
+  ConfigVersion: new Date(),
+  KeepRAW: 0,
+  FilenameConvention: "%Y-%m-%d_%H:%M:%S",
+  ImageFolder: "/vogon/images",
+  ImageFolderRAW: "/vogon/imagesRAW",
+  Active: 1,
+  Interval: 60,
+  ImgFocalLength: 1,
+  ImgApertureValue: 1,
+  ImgCopyright: "Mikko",
+  CameraNodeMap: "/vogon/nodejs/node-camera-admin/NodeMap.pfs"
+});
+
+// get config data from mongo or create collection if first run
+Config.findOne({
+  Config: 'default'
+}, function(err, data) {
+  console.log(data);
+  if (err) console.log(err);
+  if (data !== null) {
+    config = data;
+  } else {
+    config.save(function(err, data) {
+      if (err) console.log(err);
+      config = data;
+    });
+  }
+});
+
+// Paths
+var backupPath = 'backup',
   latestImageFolder = 'latest';
 
-// local overwrites
-var configPath = 'NodeMap.pfs',
-  imageFolder = 'camera_pictures/',
-  photoInterval = 60;
-
-// Config values from database
-var db = new sqlite3.Database(dbPath);
-
-db.serialize(function() {
-  db.each("SELECT * FROM CONFIG", function(err, row) {
-    if (row.property.match(/^Interval$/)) photoInterval = parseInt(row.value, 10);
-    if (row.property.match(/^ImageFolder$/)) imageFolder = row.value;
-    if (row.property.match(/^CameraNodeMap$/)) configPath = row.value;
-  });
-});
-db.close();
+var configPath = config.configPath,
+  imageFolder = config.imageFolder;
 
 setTimeout(function() { // wait until db values are loaded. refactor with promises
 
-  // configPath = 'NodeMap.pfs';
-  // imageFolder = 'camera_pictures/';
+  configPath = 'NodeMap.pfs';
+  imageFolder = 'camera_pictures/';
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
-  });
-
-  fs.exists(dbPath, function(exists) {
-    if (!exists) return console.log('ERROR! SQLite database not found.');
   });
 
   fs.exists(backupPath, function(exists) {
@@ -124,7 +166,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
       request.reply.view('index.html', {
         image: latestImageFolder + '/image.jpg',
         modified: modified,
-        interval: photoInterval
+        interval: config.Interval
       });
 
     });
@@ -134,53 +176,57 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     // Get config file data
     var configData = fs.readFileSync(configPath).toString();
 
-    // https://github.com/mapbox/node-sqlite3/wiki/API
-    var db = new sqlite3.Database(dbPath);
-
-    db.serialize(function() {
-      db.all("SELECT * FROM CONFIG", function(err, rows) {
-
-        rows.forEach(function(row) {
-          if (row['property'].match(/^ConfigVersion$/)) row['hidden'] = 'hidden';
-          if (row['property'].match(/^KeepRAW$/)) {
-            row['checkbox'] = 'checkbox';
-            row['checked'] = row.value === '1' ? 'checked' : '';
-          }
-          if (row['property'].match(/^Active$/)) {
-            row['switch'] = 'switch';
-            row['hidden'] = 'hidden';
-          }
-        });
-
-        // Render the view
-        request.reply.view('admin.html', {
-          configData: configData,
-          dbData: rows
-        });
-      });
+    Config.findOne({
+      Config: 'default'
+    }, function(err, data) {
+      config = data;
     });
-    db.close();
+
+    var array = [];
+    for (var i in config._doc) {
+      array.push({
+        property: i,
+        value: config._doc[i]
+      });
+    }
+
+    array.forEach(function(row) {
+      if (row['property'].match(/^__v|_id|Active|ConfigVersion|Config$/)) row['hidden'] = 'hidden';
+      if (row['property'].match(/^Active$/)) row['switch'] = 'switch';
+      if (row['property'].match(/^KeepRAW$/)) {
+        row['checkbox'] = 'checkbox';
+        row['checked'] = row.value === '1' ? 'checked' : '';
+      }
+    });
+
+    // Render the view
+    request.reply.view('admin.html', {
+      configData: configData,
+      dbData: array
+    });
   }
 
   function formHandler(request) {
     var payload = request.payload;
-    var db = new sqlite3.Database(dbPath);
+
+    var reply = {
+      status: 1,
+      message: ''
+    };
 
     if (parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
+    payload['ConfigVersion'] = new Date();
 
-    payload['ConfigVersion'] = new Date().toString();
+    delete payload['_id'];
 
-    db.parallelize(function() {
-      var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
-
-      for (var property in payload) {
-        if (property !== 'configData') stmt.run(payload[property], property);
-      }
-
-      stmt.finalize();
+    Config.findOneAndUpdate({
+      Config: 'default'
+    }, payload, function(err, data) {
+      if (err) reply = {
+        status: 0,
+        message: err.message
+      };
     });
-
-    db.close();
 
     // ConfigData
     var configData = payload.configData;
@@ -191,19 +237,16 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
         fs.writeFile(backupPath + '/Backup ' + new Date(), data, function(err) {
           // Save new configuration after backup is done
           fs.writeFile(configPath, configData, function(err) {
-            if (err) return request.reply({
+            if (err) reply = {
               status: 0,
               message: err.message
-            });
+            };
           });
         });
       }
     });
 
-    request.reply({
-      status: 1,
-      message: ''
-    });
+    request.reply(reply);
   }
 
 }, 1000);
