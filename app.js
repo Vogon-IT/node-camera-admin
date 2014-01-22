@@ -3,8 +3,7 @@ var fs = require('fs'),
   Hapi = require('hapi'),
   moment = require('moment'),
   im = require('imagemagick'),
-  mongoose = require('mongoose'),
-  sqlite3 = require('sqlite3').verbose();
+  mongoose = require('mongoose');
 
 // mongodb
 var Schema = mongoose.Schema;

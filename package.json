@@ -10,7 +10,6 @@
   "license": "MIT",
   "dependencies": {
     "hapi": "~1.20.0",
-    "sqlite3": "~2.1.19",
     "handlebars": "~1.1.2",
     "moment": "~2.4.0",
     "imagemagick": "~0.1.3",
