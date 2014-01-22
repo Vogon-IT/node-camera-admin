@@ -75,8 +75,8 @@ var configPath = config.configPath,
 
 setTimeout(function() { // wait until db values are loaded. refactor with promises
 
-  configPath = 'NodeMap.pfs';
-  imageFolder = 'camera_pictures/';
+  // configPath = 'NodeMap.pfs';
+  // imageFolder = 'camera_pictures/';
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
