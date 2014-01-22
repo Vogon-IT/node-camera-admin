@@ -54,7 +54,6 @@ var config = new Config({
 Config.findOne({
   Config: 'default'
 }, function(err, data) {
-  console.log(data);
   if (err) console.log(err);
   if (data !== null) {
     config = data;
@@ -70,8 +69,8 @@ Config.findOne({
 var backupPath = 'backup',
   latestImageFolder = 'latest';
 
-var configPath = config.configPath,
-  imageFolder = config.imageFolder;
+var configPath = config.CameraNodeMap,
+  imageFolder = config.ImageFolder;
 
 setTimeout(function() { // wait until db values are loaded. refactor with promises
 
