@@ -225,6 +225,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
         status: 0,
         message: err.message
       };
+      config = data;
     });
 
     // ConfigData
