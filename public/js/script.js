@@ -9,7 +9,7 @@ $switch.prop('checked', value == 1 ? true : false);
 $switch.bootstrapSwitch();
 
 $switch.on('switch-change', function(e, data) {
-  var value = data.value; // console.log(e, $element, value);
+  var value = data.value;
 
   $('#Active').val(value ? 1 : 0);
 

@@ -7,71 +7,83 @@ var fs = require('fs'),
 
 // mongodb
 var Schema = mongoose.Schema;
-
-var configSchema = new Schema({
-  Config: String,
-  ConfigVersion: {
-    type: Date,
-    default: Date.now
-  },
-  KeepRAW: Number,
-  FilenameConvention: String,
-  ImageFolder: String,
-  ImageFolderRAW: String,
-  Active: Number,
-  Interval: Number,
-  ImgFocalLength: Number,
-  ImgApertureValue: Number,
-  ImgCopyright: String,
-  CameraNodeMap: String
+var Config = mongoose.model('Config', {
+  property: String,
+  value: Schema.Types.Mixed
 });
-
-var Config = mongoose.model('Config', configSchema);
 mongoose.connect('mongodb://localhost/vogon');
 
 var db = mongoose.connection;
 db.on('error', console.error.bind(console, 'mongodb connection error:'));
 db.once('open', function callback() {});
 
-// default config
-var config = new Config({
-  Config: "default",
-  ConfigVersion: new Date(),
-  KeepRAW: 0,
-  FilenameConvention: "%Y-%m-%d_%H:%M:%S",
-  ImageFolder: "/vogon/images",
-  ImageFolderRAW: "/vogon/imagesRAW",
-  Active: 1,
-  Interval: 60,
-  ImgFocalLength: 1,
-  ImgApertureValue: 1,
-  ImgCopyright: "Mikko",
-  CameraNodeMap: "/vogon/nodejs/node-camera-admin/NodeMap.pfs"
-});
+// default configs
+var configValues = [{
+  property: 'ConfigVersion',
+  value: new Date().toString()
+}, {
+  property: 'KeepRAW',
+  value: 0
+}, {
+  property: 'FilenameConvention',
+  value: '%Y-%m-%d_%H:%M:%S'
+}, {
+  property: 'ImageFolder',
+  value: '/vogon/images'
+}, {
+  property: 'ImageFolderRAW',
+  value: '/vogon/imagesRAW'
+}, {
+  property: 'Active',
+  value: 1
+}, {
+  property: 'Interval',
+  value: 60
+}, {
+  property: 'ImgFocalLength',
+  value: 1
+}, {
+  property: 'ImgApertureValue',
+  value: 1
+}, {
+  property: 'ImgCopyright',
+  value: 'Mikko'
+}, {
+  property: 'CameraNodeMap',
+  value: '/vogon/nodejs/node-camera-admin/NodeMap.pfs'
+}];
+
+var configs = [];
 
 // get config data from mongo or create collection if first run
-Config.findOne({
-  Config: 'default'
-}, function(err, data) {
+Config.find({}, function(err, data) {
   if (err) console.log(err);
-  if (data !== null) {
-    config = data;
+
+  if (data.length) {
+    configs = data;
   } else {
-    config.save(function(err, data) {
-      if (err) console.log(err);
-      config = data;
+    configValues.forEach(function(obj) {
+      var config = new Config(obj);
+      config.save();
+      configs.push(config);
     });
   }
 });
 
-// Paths
-var backupPath = 'backup',
-  latestImageFolder = 'latest';
-
-var configPath = config.CameraNodeMap,
-  imageFolder = config.ImageFolder;
-
 setTimeout(function() { // wait until db values are loaded. refactor with promises
+
+  // Paths
+  var backupPath = 'backup',
+    latestImageFolder = 'latest';
+
+  var configPath = configs.filter(function(config) {
+    return config['property'] === 'CameraNodeMap';
+  });
+  configPath = configPath[0].value;
+  var imageFolder = configs.filter(function(config) {
+    return config['property'] === 'ImageFolder';
+  });
+  imageFolder = imageFolder[0].value;
 
   // configPath = 'NodeMap.pfs';
   // imageFolder = 'camera_pictures/';
@@ -119,7 +131,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
   };
 
   // Create a server with a host, port, and options
-  var server = Hapi.createServer('87.94.74.47', 8080, options);
+  var server = Hapi.createServer('87.94.74.47', 8080, options); //
 
   server.route({
     method: 'GET',
@@ -159,14 +171,16 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
   function imageIndex(request) {
     fs.stat('public/' + latestImageFolder + '/image.jpg', function(err, stats) {
       var modified = moment(stats.mtime).fromNow();
+      var interval = configs.filter(function(config) {
+        return config['property'] === 'Interval';
+      });
 
       // Render the view
       request.reply.view('index.html', {
         image: latestImageFolder + '/image.jpg',
         modified: modified,
-        interval: config.Interval
+        interval: interval[0].value
       });
-
     });
   }
 
@@ -174,21 +188,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     // Get config file data
     var configData = fs.readFileSync(configPath).toString();
 
-    Config.findOne({
-      Config: 'default'
-    }, function(err, data) {
-      config = data;
-    });
-
-    var array = [];
-    for (var i in config._doc) {
-      array.push({
-        property: i,
-        value: config._doc[i]
-      });
-    }
-
-    array.forEach(function(row) {
+    configs.forEach(function(row) {
       if (row['property'].match(/^__v|_id|Active|ConfigVersion|Config$/)) row['hidden'] = 'hidden';
       if (row['property'].match(/^Active$/)) row['switch'] = 'switch';
       if (row['property'].match(/^KeepRAW$/)) {
@@ -200,7 +200,7 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     // Render the view
     request.reply.view('admin.html', {
       configData: configData,
-      dbData: array
+      dbData: configs
     });
   }
 
@@ -213,18 +213,26 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
     };
 
     if (parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
-    payload['ConfigVersion'] = new Date();
+    payload['ConfigVersion'] = new Date().toString();
 
     delete payload['_id'];
 
-    Config.findOneAndUpdate({
-      Config: 'default'
-    }, payload, function(err, data) {
-      if (err) reply = {
-        status: 0,
-        message: err.message
-      };
-      config = data;
+    configs.forEach(function(obj) {
+      if (obj.property !== 'configData') {
+        var value = payload[obj.property];
+        var property = obj.property;
+        Config.findOneAndUpdate({
+          property: property
+        }, {
+          value: value
+        }, function(err, data) {
+          if (err) reply = {
+            status: 0,
+            message: err.message
+          };
+          obj.value = value;
+        });
+      }
     });
 
     // ConfigData
