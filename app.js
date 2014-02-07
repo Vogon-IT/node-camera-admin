@@ -87,8 +87,8 @@ promise.then(function(configs) {
   });
   imageFolder = imageFolder[0].value;
 
-  configPath = 'NodeMap.pfs';
-  imageFolder = 'camera_pictures/';
+  // configPath = 'NodeMap.pfs';
+  // imageFolder = 'camera_pictures/';
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
