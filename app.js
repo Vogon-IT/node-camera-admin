@@ -3,7 +3,8 @@ var fs = require('fs'),
   Hapi = require('hapi'),
   moment = require('moment'),
   im = require('imagemagick'),
-  mongoose = require('mongoose');
+  mongoose = require('mongoose'),
+  RSVP = require('rsvp'); // promise
 
 // mongodb
 var Schema = mongoose.Schema;
@@ -53,25 +54,26 @@ var configValues = [{
   value: '/vogon/nodejs/node-camera-admin/NodeMap.pfs'
 }];
 
-var configs = [];
+var promise = new RSVP.Promise(function(resolve, reject) {
+  var configs = [];
 
-// get config data from mongo or create collection if first run
-Config.find({}, function(err, data) {
-  if (err) console.log(err);
+  Config.find({}, function(err, data) {
+    if (err) reject(err);
 
-  if (data.length) {
-    configs = data;
-  } else {
-    configValues.forEach(function(obj) {
-      var config = new Config(obj);
-      config.save();
-      configs.push(config);
-    });
-  }
+    if (data.length) {
+      resolve(data);
+    } else {
+      configValues.forEach(function(obj) {
+        var config = new Config(obj);
+        config.save();
+        configs.push(config);
+      });
+      resolve(configs);
+    }
+  });
 });
 
-setTimeout(function() { // wait until db values are loaded. refactor with promises
-
+promise.then(function(configs) {
   // Paths
   var backupPath = 'backup',
     latestImageFolder = 'latest';
@@ -85,8 +87,8 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
   });
   imageFolder = imageFolder[0].value;
 
-  // configPath = 'NodeMap.pfs';
-  // imageFolder = 'camera_pictures/';
+  configPath = 'NodeMap.pfs';
+  imageFolder = 'camera_pictures/';
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
@@ -255,5 +257,6 @@ setTimeout(function() { // wait until db values are loaded. refactor with promis
 
     request.reply(reply);
   }
-
-}, 1000);
+}, function(value) { // promise failure
+  console.log(err);
+});
