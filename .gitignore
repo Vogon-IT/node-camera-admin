@@ -2,4 +2,5 @@
 ConfigDB
 node_modules
 backup
-camera_pictures
+images
+npm-debug.log

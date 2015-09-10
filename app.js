@@ -1,104 +1,48 @@
 var fs = require('fs'),
+  chokidar = require('chokidar'),
   util = require('util'),
   Hapi = require('hapi'),
   moment = require('moment'),
   im = require('imagemagick'),
-  mongoose = require('mongoose'),
-  RSVP = require('rsvp'); // promise
+  sqlite3 = require('sqlite3').verbose();
 
-// mongodb
-var Schema = mongoose.Schema;
-var Config = mongoose.model('Config', {
-  property: String,
-  value: Schema.Types.Mixed
-});
-mongoose.connect('mongodb://localhost/vogon');
+// File paths
+var dbPath = 'ConfigDB',
+  backupPath = 'backup',
+  latestImageFolder = 'latest';
 
-var db = mongoose.connection;
-db.on('error', console.error.bind(console, 'mongodb connection error:'));
-db.once('open', function callback() {});
+// Config values from database
+var db = new sqlite3.Database(dbPath);
 
-// default configs
-var configValues = [{
-  property: 'ConfigVersion',
-  value: new Date().toString()
-}, {
-  property: 'KeepRAW',
-  value: 0
-}, {
-  property: 'FilenameConvention',
-  value: '%Y-%m-%d_%H:%M:%S'
-}, {
-  property: 'ImageFolder',
-  value: '/vogon/images'
-}, {
-  property: 'ImageFolderRAW',
-  value: '/vogon/imagesRAW'
-}, {
-  property: 'Active',
-  value: 1
-}, {
-  property: 'Interval',
-  value: 60
-}, {
-  property: 'ImgFocalLength',
-  value: 1
-}, {
-  property: 'ImgApertureValue',
-  value: 1
-}, {
-  property: 'ImgCopyright',
-  value: 'Mikko'
-}, {
-  property: 'CameraNodeMap',
-  value: '/vogon/nodejs/node-camera-admin/NodeMap.pfs'
-}];
-
-var promise = new RSVP.Promise(function(resolve, reject) {
-  var configs = [];
-
-  Config.find({}, function(err, data) {
-    if (err) reject(err);
-
-    if (data.length) {
-      resolve(data);
-    } else {
-      configValues.forEach(function(obj) {
-        var config = new Config(obj);
-        config.save();
-        configs.push(config);
-      });
-      resolve(configs);
-    }
+db.serialize(function() {
+  db.each("SELECT * FROM CONFIG", function(err, row) {
+    if (row.property.match(/^Interval$/)) photoInterval = parseInt(row.value, 10);
+    if (row.property.match(/^ImageFolder$/)) imageFolder = row.value;
+    if (row.property.match(/^CameraNodeMap$/)) configPath = row.value;
   });
 });
+db.close();
 
-promise.then(function(configs) {
-  // Paths
-  var backupPath = 'backup',
-    latestImageFolder = 'latest';
+setTimeout(function() { // wait until db values are loaded. refactor with promises
 
-  var configPath = configs.filter(function(config) {
-    return config['property'] === 'CameraNodeMap';
-  });
-  configPath = configPath[0].value;
-  var imageFolder = configs.filter(function(config) {
-    return config['property'] === 'ImageFolder';
-  });
-  imageFolder = imageFolder[0].value;
-
-  // configPath = 'NodeMap.pfs';
-  // imageFolder = 'camera_pictures/';
+  // local overwrites
+  var configPath = 'NodeMap.pfs',
+    imageFolder = 'images/',
+    photoInterval = 60;
 
   fs.exists(configPath, function(exists) {
     if (!exists) return console.log('ERROR! Config file not found.');
+  });
+
+  fs.exists(dbPath, function(exists) {
+    if (!exists) return console.log('ERROR! SQLite database not found.');
   });
 
   fs.exists(backupPath, function(exists) {
     if (!exists) fs.mkdirSync(backupPath);
   });
 
-  fs.watch(imageFolder, function(event, filename) {
+  chokidar.watch(imageFolder, function(event, filename) {
     var imagePath = imageFolder + filename;
 
     if (filename.match(/(jpg|jpeg)$/)) {
@@ -133,7 +77,7 @@ promise.then(function(configs) {
   };
 
   // Create a server with a host, port, and options
-  var server = Hapi.createServer('87.94.74.47', 8080, options); //
+  var server = Hapi.createServer('127.0.0.1', 3000, options);
 
   server.route({
     method: 'GET',
@@ -173,16 +117,14 @@ promise.then(function(configs) {
   function imageIndex(request) {
     fs.stat('public/' + latestImageFolder + '/image.jpg', function(err, stats) {
       var modified = moment(stats.mtime).fromNow();
-      var interval = configs.filter(function(config) {
-        return config['property'] === 'Interval';
-      });
 
       // Render the view
       request.reply.view('index.html', {
         image: latestImageFolder + '/image.jpg',
         modified: modified,
-        interval: interval[0].value
+        interval: photoInterval
       });
+
     });
   }
 
@@ -190,24 +132,37 @@ promise.then(function(configs) {
     // Get config file data
     var configData = fs.readFileSync(configPath).toString();
 
-    configs.forEach(function(row) {
-      if (row['property'].match(/^__v|_id|Active|ConfigVersion|Config$/)) row['hidden'] = 'hidden';
-      if (row['property'].match(/^Active$/)) row['switch'] = 'switch';
-      if (row['property'].match(/^KeepRAW$/)) {
-        row['checkbox'] = 'checkbox';
-        row['checked'] = row.value === '1' ? 'checked' : '';
-      }
-    });
+    // https://github.com/mapbox/node-sqlite3/wiki/API
+    var db = new sqlite3.Database(dbPath);
 
-    // Render the view
-    request.reply.view('admin.html', {
-      configData: configData,
-      dbData: configs
+    db.serialize(function() {
+      db.all("SELECT * FROM CONFIG", function(err, rows) {
+
+        rows.forEach(function(row) {
+          if (row['property'].match(/^ConfigVersion$/)) row['hidden'] = 'hidden';
+          if (row['property'].match(/^KeepRAW$/)) {
+            row['checkbox'] = 'checkbox';
+            row['checked'] = row.value === '1' ? 'checked' : '';
+          }
+          if (row['property'].match(/^Active$/)) {
+            row['switch'] = 'switch';
+            row['hidden'] = 'hidden';
+          }
+        });
+
+        // Render the view
+        request.reply.view('admin.html', {
+          configData: configData,
+          dbData: rows
+        });
+      });
     });
+    db.close();
   }
 
   function formHandler(request) {
     var payload = request.payload;
+    var db = new sqlite3.Database(dbPath);
 
     var reply = {
       status: 1,
@@ -215,30 +170,24 @@ promise.then(function(configs) {
     };
 
     if (parseInt(payload.interval, 10) > 0) photoInterval = parseInt(payload.interval, 10);
+
     payload['ConfigVersion'] = new Date().toString();
 
-    delete payload['_id'];
+    db.parallelize(function() {
+      var stmt = db.prepare("UPDATE CONFIG SET value = ? WHERE property = ?");
 
-    configs.forEach(function(obj) {
-      if (obj.property !== 'configData') {
-        var value = payload[obj.property];
-        var property = obj.property;
-        Config.findOneAndUpdate({
-          property: property
-        }, {
-          value: value
-        }, function(err, data) {
-          if (err) reply = {
-            status: 0,
-            message: err.message
-          };
-          obj.value = value;
-        });
+      for (var property in payload) {
+        if (property !== 'configData') stmt.run(payload[property], property);
       }
+
+      stmt.finalize();
     });
+
+    db.close();
 
     // ConfigData
     var configData = payload.configData;
+
     // Make backup file from old config file
     fs.readFile(configPath, function(err, data) {
       // Check if any changes
@@ -257,6 +206,5 @@ promise.then(function(configs) {
 
     request.reply(reply);
   }
-}, function(value) { // promise failure
-  console.log(err);
-});
+
+}, 1000);
